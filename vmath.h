@@ -1,9 +1,19 @@
+#ifndef VMATH_H
+#define VMATH_H
+
 // Vector typedefs
 typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
 typedef vec_t vec4_t[4];
 typedef vec_t vec5_t[5];
+
+#define M_PI_DIV180 0.01745329251994329576
+
+#define _X 0
+#define _Y 1
+#define _Z 2
+
 
 // DotProduct(input vector 1, input vector 2, output float)
 #define DotProduct(v1,v2,out) { \
@@ -76,3 +86,16 @@ typedef vec_t vec5_t[5];
 		out[1] = v[1]/mag; \
 		out[2] = v[2]/mag; \
 }
+
+/*
+ * based on Clinton's glmatrix_identity
+ * Sets input matrix to the identity.
+ */
+#define MatrixIdentity(m) { \
+	int i; \
+	for(i = 0; i < 16; i++) \
+		if(i%5 == 0) m[i] = 1.0; \
+		else m[i] = 0.0; \
+}
+
+#endif
