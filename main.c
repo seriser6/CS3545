@@ -1,26 +1,10 @@
 /*
 ===========================================================================
-File:		 camera.c
-Author: 	 Clinton Freeman
-Created on:  Feb 7, 2011
-Description: This file is designed to help you create a simple first person
-			 camera in your program. You are free to use the entire file
-			 as a base, or to pick and choose bits that you find useful.
-			 The main functions to pay attention to are:
-			 	 - input_mouseMove
-			 	 - input_update
-			 	 - camera_translateForward
-			 	 - camera_translateStrafe
-			 	 - r_setupModelview
-			 Of course, you should spend some time looking at how each
-			 function interacts to create the effect of a camera. Here are
-			 some ideas that might be worthy of extra credit (to be done
-			 after you finish the required part):
-			 	 - learn about quaternions and use them instead of Euler
-			 	   angles to implement the same functionality. (recommended!)
-			 	 - create an isometric or third person camera.
-			 	 - investigate splines and how they are related to cinematic
-			 	   camera paths, produce a simple demo.
+File:		main.c
+Author: 	Clinton Freeman
+Created on:  	Feb 7, 2011
+Description:	Texturing demo - you will need to change the path to the texture
+		before this will work...
 ===========================================================================
 */
 
@@ -29,13 +13,18 @@ Description: This file is designed to help you create a simple first person
 #include <SDL/SDL_opengl.h>
 
 #include "vmath.h"
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
 
 #define WINDOW_WIDTH  800
 #define WINDOW_HEIGHT 600
 
 static int user_exit = 0;
+static int textureButtons;
+static int textureBrick;
 
 //INPUT DECLARATIONS
 
@@ -63,6 +52,9 @@ static void camera_translateForward(float dist);
 static void camera_translateStrafe(float dist);
 
 //RENDERER DECLARATIONS
+
+//NEW TEXTURE STUFF
+static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp);
 
 static void r_init();
 static void r_setupProjection();
@@ -165,13 +157,13 @@ static void input_update()
 	//WASD
 	//The input values are arbitrary
 	if(keys_down[SDLK_w])
-		camera_translateForward(-0.01);
-	if(keys_down[SDLK_s])
 		camera_translateForward(0.01);
+	if(keys_down[SDLK_s])
+		camera_translateForward(-0.01);
 	if(keys_down[SDLK_a])
-		camera_translateStrafe(-0.01);
-	if(keys_down[SDLK_d])
 		camera_translateStrafe(0.01);
+	if(keys_down[SDLK_d])
+		camera_translateStrafe(-0.01);
 
 	//Reset, sometimes you can get pretty lost...
 	if(keys_down[SDLK_r])
@@ -219,60 +211,23 @@ static void camera_rotateZ(float degree)
 
 static void camera_translateForward(float dist)
 {
-	//If we wish to move forward, we must first calculate
-	//a movement vector to add to our current position.
-	//Depending upon the type of camera, this behavior
-	//will differ. "Free" cameras typically allow the
-	//user to fly around wherever they are looking.
-	//"Person" cameras generally do not take into
-	//account elevation, since in real life when you look
-	//up you do not fly upward (although this would be awesome).
+	float sinX, cosX, sinY, cosY, dx, dy, dz;
 
-	//Since the only information we're storing about the
-	//camera is the orientation in terms of degrees of rotation
-	//about each cardinal axis, this representation must be converted
-	//to a cartesian vector.
-
-	//The conversion will follow a similar pattern to your standard
-	//polar -> cartesian conversion, although this can be a little
-	//confusing since we are looking down the negative Z axis.
-
-	//Since we know that the Y axis points "up", the angle of rotation
-	//around this axis will correspond to the theta found in typical polar
-	//coordinates. You will need to play around with making terms negative
-	//or positive, etc. in order to figure out exactly what the correct
-	//conversion is. Although you could figure this out a priori using
-	//diagrams and such, it is much easier and faster to use a guess
-	//and check method, since you will know you've found the correct
-	//configuration when it behaves how you want.
-
-	//Once you have the "person" camera working, you can then begin
-	//thinking about how to add in the Y (up) component. You know that
-	//if the angle between the XZ plane and the Y axis is zero, the
-	//vector should not have a Y component, and but the vector inside
-	//the XZ plane should have a magnitude of one. Additionally, you
-	//know that when the angle is 90 (i.e. you're looking "up"), the
-	//Y component should be 1.0 and the magnitude of the X and Z components
-	//should be 0.0. Given this, think of a term that you could multiply
-	//each component by to achieve this effect. What is sin(0degrees)?
-	//sin(90degrees)? cos(0degrees)? cos(90degrees)?
-	float dx, dy, dz;
-	float sinX, cosX, sinY, cosY;
-
-	sinX = sin(camera.angles_rad[_X]);
-	cosX = cos(camera.angles_rad[_X]);
 	sinY = sin(camera.angles_rad[_Y]);
 	cosY = cos(camera.angles_rad[_Y]);
 
-	//Person
-	dx =  -sinY*dist;
-	dy =  0;
-	dz =  -cosY*dist;
+	sinX = sin(camera.angles_rad[_X]);
+	cosX = cos(camera.angles_rad[_X]);
 
 	//Free
-	//dx =  -sinY*cosX*dist;
-	//dy =  ???;
-	//dz =  -cosY*cosX*dist;
+//	dx =  -sinY * cosX * dist;
+//	dy =  sinX * dist;
+//	dz =  -cosY * cosX * dist;
+
+	//Person
+	dx =  -sinY * dist;
+	dy =  0.0;
+	dz =  -cosY * dist;
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
@@ -281,65 +236,196 @@ static void camera_translateForward(float dist)
 
 static void camera_translateStrafe(float dist)
 {
-	//If we wish to move forward, we must first calculate
-	//a movement vector to add to our current position.
-	//Depending upon the type of camera, this behavior
-	//will differ. "Free" cameras typically allow the
-	//user to fly around wherever they are looking.
-	//"Person" cameras generally do not take into
-	//account elevation, since in real life when you look
-	//up you do not fly upward (although this would be awesome).
+	float sinX, cosX, sinY, cosY, dx, dy, dz, yPlus90;
 
-	//Since the only information we're storing about the
-	//camera is the orientation in terms of degrees of rotation
-	//about each cardinal axis, this representation must be converted
-	//to a cartesian vector.
+	yPlus90 = (camera.angles_deg[_Y] + 90.0) * M_PI_DIV180;
 
-	//The conversion will follow a similar pattern to your standard
-	//polar -> cartesian conversion, although this can be a little
-	//confusing since we are looking down the negative Z axis.
-
-	//Since we know that the Y axis points "up", the angle of rotation
-	//around this axis will correspond to the theta found in typical polar
-	//coordinates. You will need to play around with making terms negative
-	//or positive, etc. in order to figure out exactly what the correct
-	//conversion is. Although you could figure this out a priori using
-	//diagrams and such, it is much easier and faster to use a guess
-	//and check method, since you will know you've found the correct
-	//configuration when it behaves how you want.
-
-	//Once you have the "person" camera working, you can then begin
-	//thinking about how to add in the Y (up) component. You know that
-	//if the angle between the XZ plane and the Y axis is zero, the
-	//vector should not have a Y component, and but the vector inside
-	//the XZ plane should have a magnitude of one. Additionally, you
-	//know that when the angle is 90 (i.e. you're looking "up"), the
-	//Y component should be 1.0 and the magnitude of the X and Z components
-	//should be 0.0. Given this, think of a term that you could multiply
-	//each component by to achieve this effect. What is sin(0degrees)?
-	//sin(90degrees)? cos(0degrees)? cos(90degrees)?
-	float dx, dy, dz;
-
-	float sinX, cosX, sinY, cosY, sinZ, cosZ;
+	sinY = sin(yPlus90);
+	cosY = cos(yPlus90);
 
 	sinX = sin(camera.angles_rad[_X]);
 	cosX = cos(camera.angles_rad[_X]);
-	sinY = sin(camera.angles_rad[_Y]);
-	cosY = cos(camera.angles_rad[_Y]);
-
-	//Person
-	dx =  -cosY*dist;
-	dy =  0;
-	dz =  -sinY*dist;
 
 	//Free
-	//dx =  -sinX*cosY*dist;
-	//dy =  ???;
-	//dz =  -cosX*cosY*dist;
+	dx =  -sinY * cosX * dist;
+	dy =  0.0;
+	dz =  -cosY * cosX * dist;
+
+	//Person
+	//dx =  -sinY * dist;
+	//dy =  0.0;
+	//dz =  -cosY * dist;
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
 	camera.position[_Z] += dz;
+}
+
+/*
+===========================================================================
+	TGA LOADING
+===========================================================================
+*/
+
+#define HEADER_SIZE 18
+
+typedef unsigned char byte;
+
+typedef struct
+{
+	unsigned char 	idLength, colormapType, imageType;
+	unsigned char	colormapSize;
+	unsigned short	colormapIndex, colormapLength;
+	unsigned short	xOrigin, yOrigin, width, height;
+	unsigned char	pixelSize, attributes;
+}
+tgaHeader_t;
+
+/*
+ * Function: renderer_img_loadTGA
+ * Description: Loads a TARGA image file, uploads to GL, and returns the
+ * texture ID. Only supports 24/32 bit.
+ */
+static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp)
+{
+	int				dataSize, rows, cols, i, j;
+	GLuint			type;
+	byte			*buf, *imageData, *pixelBuf, red, green, blue, alpha;
+
+	FILE 			*file;
+	tgaHeader_t		header;
+	struct stat 	st;
+
+	file = fopen(name, "rb");
+
+	if(file == NULL)
+	{
+		printf("Loading TGA: %s, failed. Null file pointer.\n", name);
+		return;
+	}
+
+	if(stat(name, &st))
+	{
+		printf("Loading TGA: %s, failed. Could not determine file size.\n", name);
+		return;
+	}
+
+	if(st.st_size < HEADER_SIZE)
+	{
+		printf("Loading TGA: %s, failed. Header too short.\n", name);
+		return;
+	}
+
+	buf = (byte *)malloc(st.st_size);
+	fread(buf, sizeof(byte), st.st_size, file);
+
+	fclose(file);
+
+	memcpy(&header.idLength, 	 	&buf[0],  1);
+	memcpy(&header.colormapType, 	&buf[1],  1);
+	memcpy(&header.imageType, 		&buf[2],  1);
+	memcpy(&header.colormapIndex, 	&buf[3],  2);
+	memcpy(&header.colormapLength,  &buf[5],  2);
+	memcpy(&header.colormapSize, 	&buf[7],  1);
+	memcpy(&header.xOrigin,			&buf[8],  2);
+	memcpy(&header.yOrigin,			&buf[10], 2);
+	memcpy(&header.width,			&buf[12], 2);
+	memcpy(&header.height,			&buf[14], 2);
+	memcpy(&header.pixelSize,		&buf[16], 1);
+	memcpy(&header.attributes,		&buf[17], 1);
+
+	//Advance past the header
+	buf += HEADER_SIZE;
+
+	if(header.pixelSize != 24 && header.pixelSize != 32)
+	{
+		printf("Loading TGA: %s, failed. Only support 24/32 bit images.\n", name);
+		return;
+	}
+	else if(header.pixelSize == 24)
+		type = GL_RGB;
+	else
+		type = GL_RGBA;
+
+	//Determine size of image data chunk in bytes
+	dataSize = header.width * header.height * (header.pixelSize / 8);
+
+	//Set up our texture
+	*bpp 	 	= header.pixelSize;
+	*width  	= header.width;
+	*height 	= header.height;
+
+	imageData = (byte *)malloc(dataSize);
+	rows	  = *height;
+	cols	  = *width;
+
+	if(type == GL_RGB)
+	{
+		for(i = 0; i < rows; i++)
+		{
+			pixelBuf = imageData + (i * cols * 3);
+			for(j = 0; j < cols; j++)
+			{
+				blue 	= *buf++;
+				green 	= *buf++;
+				red		= *buf++;
+
+				*pixelBuf++ = red;
+				*pixelBuf++ = green;
+				*pixelBuf++ = blue;
+			}
+		}
+	}
+	else
+	{
+		for(i = 0; i < rows; i++)
+		{
+			pixelBuf = imageData + (i * cols * 4);
+			for(j = 0; j < cols; j++)
+			{
+				blue 	= *buf++;
+				green 	= *buf++;
+				red		= *buf++;
+				alpha	= *buf++;
+
+				*pixelBuf++ = red;
+				*pixelBuf++ = green;
+				*pixelBuf++ = blue;
+				*pixelBuf++ = alpha;
+			}
+		}
+	}
+
+	//Upload the texture to OpenGL
+	glGenTextures(1, glTexID);
+	glBindTexture(GL_TEXTURE_2D, *glTexID);
+
+	//Default OpenGL settings have GL_TEXTURE_MAG/MIN_FILTER set to use
+	//mipmaps... without these calls texturing will not work properly.
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	//Upload image data to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0, type, *width, *height,
+			0, type, GL_UNSIGNED_BYTE, imageData);
+
+	//Header debugging
+	/*
+	printf("Attributes: %d\n", 				header.attributes);
+	printf("Colormap Index: %d\n", 			header.colormapIndex);
+	printf("Colormap Length: %d\n", 		header.colormapLength);
+	printf("Colormap Size: %d\n", 			header.colormapSize);
+	printf("Colormap Type: %d\n", 			header.colormapType);
+	printf("Height: %d\n", 					header.height);
+	printf("Identification Length: %d\n",	header.idLength);
+	printf("Image Type: %d\n", 				header.imageType);
+	printf("Pixel Size: %d\n", 				header.pixelSize);
+	printf("Width: %d\n", 					header.width);
+	printf("X Origin: %d\n", 				header.xOrigin);
+	printf("Y Origin: %d\n", 				header.yOrigin);
+	*/
 }
 
 /*
@@ -354,7 +440,20 @@ static void camera_translateStrafe(float dist)
  */
 static void r_init()
 {
+	int myGLTexture, myTexWidth, myTexHeight, myTexBPP;
+
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+	//NEW TEXTURE STUFF
+	glEnable(GL_TEXTURE_2D);
+	//You might want to play with changing the modes
+	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	r_image_loadTGA("buttons.tga",
+			&textureButtons, &myTexWidth, &myTexHeight, &myTexBPP);
+	r_image_loadTGA("brick.tga",
+			&textureBrick, &myTexWidth, &myTexHeight, &myTexBPP);
 
 	camera_init();
 
@@ -369,11 +468,7 @@ static void r_setupProjection()
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60.0, 1.33, 1, 800);
-//	gluLookAt(
-//				1,1,5,
-//				0,0,0,
-//				0,1,0);
+	gluPerspective(90.0, 1.33, 0.5, 1024.0);
 }
 
 /*
@@ -384,110 +479,33 @@ static void r_setupModelview()
 {
 	float sinX, cosX, sinY, cosY, sinZ, cosZ;
 
-	//Game Engine Architecture talks about row vector vs column vector
-	//conventions on page 153. It chooses to use row vector
-	//while OpenGL represents vectors as columns. Thus, the
-	//canonical matrices that are given in the book (page 157)
-	//must first be transposed to fit OpenGL's format.
-	//A second complication is that OpenGL differs from C
-	//in that matrices are stored column-major, not row-major.
-	//The Red Book suggests using a flat, 1-dimensional
-	//16 element array instead of the intuitive 4x4 2-dimensional
-	//array you might naturally choose to use. If you choose to
-	//do this, here are the correct indices:
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
+	sinX = sin(-camera.angles_rad[_X]);
+	cosX = cos(-camera.angles_rad[_X]);
 
-	//X rotation matrix from book (for multiplying row vectors rM = r')
-	//1  0      0      0
-	//0  cos(r) sin(r) 0
-	//0 -sin(r) cos(r) 0
-	//0  0      0      1
-	//Transpose (for multiplying column vectors Mc = c')
-	//1 0       0      0
-	//0 cos(r) -sin(r) 0
-	//0 sin(r)  cos(r) 0
-	//0 0       0      1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-	sinX = sin(camera.angles_rad[_X]);
-	cosX = cos(camera.angles_rad[_X]);
-
-	xRotMatrix[5] = cosX;
-	xRotMatrix[6] = -sinX;
-	xRotMatrix[9] = sinX;
+	xRotMatrix[5]  = cosX;
+	xRotMatrix[6]  = sinX;
+	xRotMatrix[9]  = -sinX;
 	xRotMatrix[10] = cosX;
 
-	//Y rotation matrix from book (for multiplying row vectors rM = r')
-	//cos(r) 0 -sin(r) 0
-	//0      1  0      0
-	//sin(r) 0  cos(r) 0
-	//0      0  0      1
-	//Transpose (for multiplying column vectors Mc = c')
-	// cos(r) 0 sin(r) 0
-	// 0      1 0      0
-	//-sin(r) 0 cos(r) 0
-	// 0      0 0      1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-	sinY = sin(camera.angles_rad[_Y]);
-	cosY = cos(camera.angles_rad[_Y]);
+	sinY = sin(-camera.angles_rad[_Y]);
+	cosY = cos(-camera.angles_rad[_Y]);
 
-	yRotMatrix[0] = cosY;
-	yRotMatrix[2] = sinY;
-	yRotMatrix[8] = -sinY;
-	yRotMatrix[10] = cosY;
+	yRotMatrix[0]  =  cosY;
+	yRotMatrix[2]  = -sinY;
+	yRotMatrix[8]  =  sinY;
+	yRotMatrix[10] =  cosY;
 
-	//Z rotation matrix from book (for multiplying row vectors rM = r')
-	// cos(r) sin(r) 0 0
-	//-sin(r) cos(r) 0 0
-	// 0      0      1 0
-	// 0      0      0 1
-	//Transpose (for multiplying column vectors Mc = c')
-	//cos(r) -sin(r) 0 0
-	//sin(r)  cos(r) 0 0
-	//0       0      1 0
-	//0       0      0 1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-	sinZ = sin(camera.angles_rad[_Z]);
-	cosZ = cos(camera.angles_rad[_Z]);
+	sinZ = sin(-camera.angles_rad[_Z]);
+	cosZ = cos(-camera.angles_rad[_Z]);
 
 	zRotMatrix[0] = cosZ;
-	zRotMatrix[1] = -sinZ;
-	zRotMatrix[4] = sinZ;
+	zRotMatrix[1] = sinZ;
+	zRotMatrix[4] = -sinZ;
 	zRotMatrix[5] = cosZ;
 
-	//Translation matrix from book (for multiplying row vectors rM = r')
-	//1 0 0 0
-	//0 1 0 0
-	//0 0 1 0
-	//x y z 1
-	//Transpose (for multiplying column vectors Mc = c')
-	//1 0 0 x
-	//0 1 0 y
-	//0 0 1 z
-	//0 0 0 1
-	//Indices
-	//0 4 8  12
-	//1 5 9  13
-	//2 6 10 14
-	//3 7 11 15
-
-	translateMatrix[3] = camera.position[_X];
-	translateMatrix[7] = camera.position[_Y];
-	translateMatrix[11] = camera.position[_Z];
+	translateMatrix[12] = -camera.position[_X];
+	translateMatrix[13] = -camera.position[_Y];
+	translateMatrix[14] = -camera.position[_Z];
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -508,93 +526,79 @@ static void r_drawFrame()
 	//Orient and position the camera
 	r_setupModelview();
 
-	glColor3f(0.0, 1.0, 0.0); // green
-	glBegin(GL_LINES); // +x axis
-		glVertex3f(0,0,0);
-		glVertex3f(20,0,0);
+	glBindTexture(GL_TEXTURE_2D, textureButtons);
+	glColor3f(1.0, 1.0, 1.0);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+			glVertex3f(-1, -1, -7.0);
+		glTexCoord2f(1.0, 0.0);
+			glVertex3f( 1, -1, -7.0);
+		glTexCoord2f(1.0, 1.0);
+			glVertex3f( 1,  1, -7.0);
+		glTexCoord2f(0.0, 1.0);
+			glVertex3f(-1,  1, -7.0);
 	glEnd();
-	glColor3f(1.0, 0.0, 1.0); // opposite of green
-	glBegin(GL_LINES); // -x axis
-		glVertex3f(0,0,0);
-		glVertex3f(-20,0,0);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+			glVertex3f( 1, -1, -7.0);
+		glTexCoord2f(1.0, 0.0);
+			glVertex3f( 1, -1, -9.0);
+		glTexCoord2f(1.0, 1.0);
+			glVertex3f( 1,  1, -9.0);
+		glTexCoord2f(0.0, 1.0);
+			glVertex3f( 1,  1, -7.0);
 	glEnd();
-	glColor3f(0.0, 0.0, 1.0); // blue
-	glBegin(GL_LINES); // +y axis
-		glVertex3f(0,0,0);
-		glVertex3f(0,20,0);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+			glVertex3f( 1, -1, -9.0);
+		glTexCoord2f(1.0, 0.0);
+			glVertex3f(-1, -1, -9.0);
+		glTexCoord2f(1.0, 1.0);
+			glVertex3f(-1,  1, -9.0);
+		glTexCoord2f(0.0, 1.0);
+			glVertex3f( 1,  1, -9.0);
 	glEnd();
-	glColor3f(1.0, 1.0, 0.0); // opposite of blue
-	glBegin(GL_LINES); // -y axis
-		glVertex3f(0,0,0);
-		glVertex3f(0,-20,0);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+			glVertex3f(-1, -1, -9.0);
+		glTexCoord2f(1.0, 0.0);
+			glVertex3f(-1, -1, -7.0);
+		glTexCoord2f(1.0, 1.0);
+			glVertex3f(-1,  1, -7.0);
+		glTexCoord2f(0.0, 1.0);
+			glVertex3f(-1,  1, -9.0);
 	glEnd();
-	glColor3f(1.0, 0.0, 0.0); // red
-	glBegin(GL_LINES); // +z axis
-		glVertex3f(0,0,0);
-		glVertex3f(0,0,20);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+			glVertex3f(-1,  1, -7.0);
+		glTexCoord2f(1.0, 0.0);
+			glVertex3f( 1,  1, -7.0);
+		glTexCoord2f(1.0, 1.0);
+			glVertex3f( 1,  1, -9.0);
+		glTexCoord2f(0.0, 1.0);
+			glVertex3f(-1,  1, -9.0);
 	glEnd();
-	glColor3f(0.0, 1.0, 1.0); // opposite of red
-	glBegin(GL_LINES); // -z axis
-		glVertex3f(0,0,0);
-		glVertex3f(0,0,-20);
-	glEnd();
-
-	float x1 = -0.6;
-	float y1 = -0.6;
-	float z1 = -0.6;
-	float x2 = 0.6;
-	float y2 = 0.6;
-	float z2 = 0.6;
-
-	z1 -= 10;
-	z2 -= 10;
-
-	glColor3f(0.0, 1.0, 0.0); // green
-	glBegin(GL_QUADS); // left face
-		glVertex3f(x1, y1, z1);
-		glVertex3f(x1, y1, z2);
-		glVertex3f(x1, y2, z2);
-		glVertex3f(x1, y2, z1);
-	glEnd();
-
-	glColor3f(0.0, 0.0, 1.0); // blue
-	glBegin(GL_QUADS); // right face
-		glVertex3f(x2, y1, z1);
-		glVertex3f(x2, y1, z2);
-		glVertex3f(x2, y2, z2);
-		glVertex3f(x2, y2, z1);
-	glEnd();
-
-	glColor3f(1.0, 0.0, 0.0); // red
-	glBegin(GL_QUADS); // bottom face
-		glVertex3f(x1, y1, z1);
-		glVertex3f(x1, y1, z2);
-		glVertex3f(x2, y1, z2);
-		glVertex3f(x2, y1, z1);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+			glVertex3f( 1, -1, -7.0);
+		glTexCoord2f(1.0, 0.0);
+			glVertex3f(-1, -1, -7.0);
+		glTexCoord2f(1.0, 1.0);
+			glVertex3f(-1, -1, -9.0);
+		glTexCoord2f(0.0, 1.0);
+			glVertex3f( 1, -1, -9.0);
 	glEnd();
 
-	glColor3f(1.0, 0.5, 0.0); // orange
-	glBegin(GL_QUADS); // top face
-		glVertex3f(x1, y2, z1);
-		glVertex3f(x1, y2, z2);
-		glVertex3f(x2, y2, z2);
-		glVertex3f(x2, y2, z1);
-	glEnd();
-
-	glColor3f(1.0, 1.0, 0.0); // yellow
-	glBegin(GL_QUADS); // back face
-		glVertex3f(x1, y1, z1);
-		glVertex3f(x1, y2, z1);
-		glVertex3f(x2, y2, z1);
-		glVertex3f(x2, y1, z1);
-	glEnd();
-
-	glColor3f(1.0, 1.0, 1.0); // white
-	glBegin(GL_QUADS); // front face
-		glVertex3f(x1, y1, z2);
-		glVertex3f(x1, y2, z2);
-		glVertex3f(x2, y2, z2);
-		glVertex3f(x2, y1, z2);
+	glBindTexture(GL_TEXTURE_2D, textureBrick);
+	glBegin(GL_QUADS);
+		glTexCoord2f(0.0, 0.0);
+			glVertex3f( 100, -1, -100.0);
+		glTexCoord2f(100.0, 0.0);
+			glVertex3f(-100, -1, -100.0);
+		glTexCoord2f(100.0, 100.0);
+			glVertex3f(-100, -1,  100.0);
+		glTexCoord2f(0.0, 100.0);
+			glVertex3f( 100, -1,  100.0);
 	glEnd();
 
 	SDL_GL_SwapBuffers();
