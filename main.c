@@ -12,6 +12,9 @@ Description:	Texturing demo - you will need to change the path to the texture
 #include <SDL/SDL_main.h>
 #include <SDL/SDL_opengl.h>
 
+#include "renderer_models.h"
+#include "renderer_materials.h"
+#include "common.h"
 #include "vmath.h"
 #include <math.h>
 #include <stdio.h>
@@ -60,6 +63,19 @@ static void r_init();
 static void r_setupProjection();
 static void r_setupModelview();
 static void r_drawFrame();
+
+typedef struct
+{
+	int		glTexID;
+	char	name[128];
+	vec3_t	ambient, diffuse, specular;
+	float	shine, shineStrength, transparency;
+	int		width, height, bpp;
+}
+material_t;
+
+static material_t materialList[MAX_TEXTURES];
+static int stackPtr = 0;
 
 /*
  * SDL_main
@@ -124,7 +140,7 @@ int main(int argc, char* argv[])
 ===========================================================================
 */
 
-static int keys_down[256];
+static int keys_down[SDLK_LAST];
 
 static void input_keyDown(SDLKey k) { keys_down[k] = 1; if(k == SDLK_ESCAPE || k == SDLK_q) user_exit = 1; }
 static void input_keyUp  (SDLKey k) { keys_down[k] = 0; }
@@ -220,14 +236,14 @@ static void camera_translateForward(float dist)
 	cosX = cos(camera.angles_rad[_X]);
 
 	//Free
-//	dx =  -sinY * cosX * dist;
-//	dy =  sinX * dist;
-//	dz =  -cosY * cosX * dist;
+	dx =  -sinY * cosX * dist;
+	dy =  sinX * dist;
+	dz =  -cosY * cosX * dist;
 
 	//Person
-	dx =  -sinY * dist;
-	dy =  0.0;
-	dz =  -cosY * dist;
+//	dx =  -sinY * dist;
+//	dy =  0.0;
+//	dz =  -cosY * dist;
 
 	camera.position[_X] += dx;
 	camera.position[_Y] += dy;
@@ -269,7 +285,7 @@ static void camera_translateStrafe(float dist)
 
 #define HEADER_SIZE 18
 
-typedef unsigned char byte;
+//typedef unsigned char byte;
 
 typedef struct
 {
@@ -286,7 +302,7 @@ tgaHeader_t;
  * Description: Loads a TARGA image file, uploads to GL, and returns the
  * texture ID. Only supports 24/32 bit.
  */
-static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp)
+void renderer_img_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp)
 {
 	int				dataSize, rows, cols, i, j;
 	GLuint			type;
@@ -450,10 +466,13 @@ static void r_init()
 	//You might want to play with changing the modes
 	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-	r_image_loadTGA("buttons.tga",
-			&textureButtons, &myTexWidth, &myTexHeight, &myTexBPP);
-	r_image_loadTGA("brick.tga",
-			&textureBrick, &myTexWidth, &myTexHeight, &myTexBPP);
+//	renderer_img_loadTGA("buttons.tga",
+//			&textureButtons, &myTexWidth, &myTexHeight, &myTexBPP);
+//	renderer_img_loadTGA("brick.tga",
+//			&textureBrick, &myTexWidth, &myTexHeight, &myTexBPP);
+	renderer_model_loadASE("submarine.ASE", efalse);
+
+
 
 	camera_init();
 
@@ -526,80 +545,112 @@ static void r_drawFrame()
 	//Orient and position the camera
 	r_setupModelview();
 
-	glBindTexture(GL_TEXTURE_2D, textureButtons);
-	glColor3f(1.0, 1.0, 1.0);
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-			glVertex3f(-1, -1, -7.0);
-		glTexCoord2f(1.0, 0.0);
-			glVertex3f( 1, -1, -7.0);
-		glTexCoord2f(1.0, 1.0);
-			glVertex3f( 1,  1, -7.0);
-		glTexCoord2f(0.0, 1.0);
-			glVertex3f(-1,  1, -7.0);
-	glEnd();
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-			glVertex3f( 1, -1, -7.0);
-		glTexCoord2f(1.0, 0.0);
-			glVertex3f( 1, -1, -9.0);
-		glTexCoord2f(1.0, 1.0);
-			glVertex3f( 1,  1, -9.0);
-		glTexCoord2f(0.0, 1.0);
-			glVertex3f( 1,  1, -7.0);
-	glEnd();
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-			glVertex3f( 1, -1, -9.0);
-		glTexCoord2f(1.0, 0.0);
-			glVertex3f(-1, -1, -9.0);
-		glTexCoord2f(1.0, 1.0);
-			glVertex3f(-1,  1, -9.0);
-		glTexCoord2f(0.0, 1.0);
-			glVertex3f( 1,  1, -9.0);
-	glEnd();
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-			glVertex3f(-1, -1, -9.0);
-		glTexCoord2f(1.0, 0.0);
-			glVertex3f(-1, -1, -7.0);
-		glTexCoord2f(1.0, 1.0);
-			glVertex3f(-1,  1, -7.0);
-		glTexCoord2f(0.0, 1.0);
-			glVertex3f(-1,  1, -9.0);
-	glEnd();
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-			glVertex3f(-1,  1, -7.0);
-		glTexCoord2f(1.0, 0.0);
-			glVertex3f( 1,  1, -7.0);
-		glTexCoord2f(1.0, 1.0);
-			glVertex3f( 1,  1, -9.0);
-		glTexCoord2f(0.0, 1.0);
-			glVertex3f(-1,  1, -9.0);
-	glEnd();
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-			glVertex3f( 1, -1, -7.0);
-		glTexCoord2f(1.0, 0.0);
-			glVertex3f(-1, -1, -7.0);
-		glTexCoord2f(1.0, 1.0);
-			glVertex3f(-1, -1, -9.0);
-		glTexCoord2f(0.0, 1.0);
-			glVertex3f( 1, -1, -9.0);
-	glEnd();
-
-	glBindTexture(GL_TEXTURE_2D, textureBrick);
-	glBegin(GL_QUADS);
-		glTexCoord2f(0.0, 0.0);
-			glVertex3f( 100, -1, -100.0);
-		glTexCoord2f(100.0, 0.0);
-			glVertex3f(-100, -1, -100.0);
-		glTexCoord2f(100.0, 100.0);
-			glVertex3f(-100, -1,  100.0);
-		glTexCoord2f(0.0, 100.0);
-			glVertex3f( 100, -1,  100.0);
-	glEnd();
-
+	renderer_model_drawASE(0);
+//	glBindTexture(GL_TEXTURE_2D, textureButtons);
+//	glColor3f(1.0, 1.0, 1.0);
+//	glBegin(GL_QUADS);
+//		glTexCoord2f(0.0, 0.0);
+//			glVertex3f(-1, -1, -7.0);
+//		glTexCoord2f(1.0, 0.0);
+//			glVertex3f( 1, -1, -7.0);
+//		glTexCoord2f(1.0, 1.0);
+//			glVertex3f( 1,  1, -7.0);
+//		glTexCoord2f(0.0, 1.0);
+//			glVertex3f(-1,  1, -7.0);
+//	glEnd();
+//	glBegin(GL_QUADS);
+//		glTexCoord2f(0.0, 0.0);
+//			glVertex3f( 1, -1, -7.0);
+//		glTexCoord2f(1.0, 0.0);
+//			glVertex3f( 1, -1, -9.0);
+//		glTexCoord2f(1.0, 1.0);
+//			glVertex3f( 1,  1, -9.0);
+//		glTexCoord2f(0.0, 1.0);
+//			glVertex3f( 1,  1, -7.0);
+//	glEnd();
+//	glBegin(GL_QUADS);
+//		glTexCoord2f(0.0, 0.0);
+//			glVertex3f( 1, -1, -9.0);
+//		glTexCoord2f(1.0, 0.0);
+//			glVertex3f(-1, -1, -9.0);
+//		glTexCoord2f(1.0, 1.0);
+//			glVertex3f(-1,  1, -9.0);
+//		glTexCoord2f(0.0, 1.0);
+//			glVertex3f( 1,  1, -9.0);
+//	glEnd();
+//	glBegin(GL_QUADS);
+//		glTexCoord2f(0.0, 0.0);
+//			glVertex3f(-1, -1, -9.0);
+//		glTexCoord2f(1.0, 0.0);
+//			glVertex3f(-1, -1, -7.0);
+//		glTexCoord2f(1.0, 1.0);
+//			glVertex3f(-1,  1, -7.0);
+//		glTexCoord2f(0.0, 1.0);
+//			glVertex3f(-1,  1, -9.0);
+//	glEnd();
+//	glBegin(GL_QUADS);
+//		glTexCoord2f(0.0, 0.0);
+//			glVertex3f(-1,  1, -7.0);
+//		glTexCoord2f(1.0, 0.0);
+//			glVertex3f( 1,  1, -7.0);
+//		glTexCoord2f(1.0, 1.0);
+//			glVertex3f( 1,  1, -9.0);
+//		glTexCoord2f(0.0, 1.0);
+//			glVertex3f(-1,  1, -9.0);
+//	glEnd();
+//	glBegin(GL_QUADS);
+//		glTexCoord2f(0.0, 0.0);
+//			glVertex3f( 1, -1, -7.0);
+//		glTexCoord2f(1.0, 0.0);
+//			glVertex3f(-1, -1, -7.0);
+//		glTexCoord2f(1.0, 1.0);
+//			glVertex3f(-1, -1, -9.0);
+//		glTexCoord2f(0.0, 1.0);
+//			glVertex3f( 1, -1, -9.0);
+//	glEnd();
+//
+//	glBindTexture(GL_TEXTURE_2D, textureBrick);
+//	glBegin(GL_QUADS);
+//		glTexCoord2f(0.0, 0.0);
+//			glVertex3f( 100, -1, -100.0);
+//		glTexCoord2f(100.0, 0.0);
+//			glVertex3f(-100, -1, -100.0);
+//		glTexCoord2f(100.0, 100.0);
+//			glVertex3f(-100, -1,  100.0);
+//		glTexCoord2f(0.0, 100.0);
+//			glVertex3f( 100, -1,  100.0);
+//	glEnd();
+//
 	SDL_GL_SwapBuffers();
 }
+
+/*
+ * renderer_img_createMaterial
+ */
+int renderer_img_createMaterial(char *name, vec3_t ambient, vec3_t diffuse, vec3_t specular,
+		float shine, float shineStrength, float transparency)
+{
+	material_t *currentMat = &materialList[stackPtr];
+
+	currentMat->shine 			= shine;
+	currentMat->shineStrength 	= shineStrength;
+	currentMat->transparency 	= transparency;
+
+	strcpy(currentMat->name, name);
+
+	VectorCopy(ambient,  currentMat->ambient);
+	VectorCopy(diffuse,  currentMat->diffuse);
+	VectorCopy(specular, currentMat->specular);
+
+	renderer_img_loadTGA(name, &(currentMat->glTexID),
+			&(currentMat->width), &(currentMat->height), &(currentMat->bpp));
+//	r_image_loadTGA(name, &(currentMat->glTexID),
+//			&(currentMat->width), &(currentMat->height), &(currentMat->bpp));
+
+	return stackPtr++;
+}
+
+int renderer_img_getMatGLID  (int i) { return materialList[i].glTexID; }
+int renderer_img_getMatWidth (int i) { return materialList[i].width;   }
+int renderer_img_getMatHeight(int i) { return materialList[i].height;  }
+int renderer_img_getMatBpp   (int i) { return materialList[i].bpp;     }
