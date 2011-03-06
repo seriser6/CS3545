@@ -373,7 +373,7 @@ static void loadASE_parseTokens(char **tokens, int numTokens, eboolean collidabl
 
 				model->objects[curObj].mesh.tvertList[j].vertexID   = atoi(tokens[i++]);
 				model->objects[curObj].mesh.tvertList[j].coords[_X] = atof(tokens[i++]);
-				model->objects[curObj].mesh.tvertList[j].coords[_Y] = 1.0-atof(tokens[i++]);
+				model->objects[curObj].mesh.tvertList[j].coords[_Y] = atof(tokens[i++]);
 				model->objects[curObj].mesh.tvertList[j].coords[_Z] = atof(tokens[i++]);
 			}
 		}
@@ -411,7 +411,7 @@ static void loadASE_parseTokens(char **tokens, int numTokens, eboolean collidabl
 		{
 			curVNormal = atoi(tokens[++i]);
 			model->objects[curObj].mesh.vertexList[curVNormal].normal[_X] = atof(tokens[++i]);
-			model->objects[curObj].mesh.vertexList[curVNormal].normal[_Y] = atof(tokens[++i]);
+			model->objects[curObj].mesh.vertexList[curVNormal].normal[_Y] = 1.0-atof(tokens[++i]);
 			model->objects[curObj].mesh.vertexList[curVNormal].normal[_Z] = atof(tokens[++i]);
 		}
 		else if(!strcmp(tokens[i], "*MATERIAL_REF"))

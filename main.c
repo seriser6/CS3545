@@ -26,8 +26,9 @@ Description:	Texturing demo - you will need to change the path to the texture
 #define WINDOW_HEIGHT 600
 
 static int user_exit = 0;
-static int textureButtons;
-static int textureBrick;
+static int textureStars;
+//static int textureButtons;
+//static int textureBrick;
 
 //INPUT DECLARATIONS
 
@@ -173,13 +174,13 @@ static void input_update()
 	//WASD
 	//The input values are arbitrary
 	if(keys_down[SDLK_w])
-		camera_translateForward(0.01);
+		camera_translateForward(0.1);
 	if(keys_down[SDLK_s])
-		camera_translateForward(-0.01);
+		camera_translateForward(-0.1);
 	if(keys_down[SDLK_a])
-		camera_translateStrafe(0.01);
+		camera_translateStrafe(0.1);
 	if(keys_down[SDLK_d])
-		camera_translateStrafe(-0.01);
+		camera_translateStrafe(-0.1);
 
 	//Reset, sometimes you can get pretty lost...
 	if(keys_down[SDLK_r])
@@ -459,7 +460,7 @@ static void r_init()
 	int myGLTexture, myTexWidth, myTexHeight, myTexBPP;
 
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
+//	glEnable(GL_CULL_FACE);
 
 	//NEW TEXTURE STUFF
 	glEnable(GL_TEXTURE_2D);
@@ -470,6 +471,8 @@ static void r_init()
 //			&textureButtons, &myTexWidth, &myTexHeight, &myTexBPP);
 //	renderer_img_loadTGA("brick.tga",
 //			&textureBrick, &myTexWidth, &myTexHeight, &myTexBPP);
+	renderer_img_loadTGA("Starfield.tga",
+			&textureStars, &myTexWidth, &myTexHeight, &myTexBPP);
 	renderer_model_loadASE("submarine.ASE", efalse);
 
 
@@ -487,14 +490,14 @@ static void r_setupProjection()
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(90.0, 1.33, 0.5, 1024.0);
+	gluPerspective(90.0, 1.33, 0.1, 1024.0);
 }
 
 /*
  * r_setupModelview
  * Calculates the GL modelview matrix. Called each frame.
  */
-static void r_setupModelview()
+static void r_setupModelviewRotate()
 {
 	float sinX, cosX, sinY, cosY, sinZ, cosZ;
 
@@ -522,15 +525,24 @@ static void r_setupModelview()
 	zRotMatrix[4] = -sinZ;
 	zRotMatrix[5] = cosZ;
 
-	translateMatrix[12] = -camera.position[_X];
-	translateMatrix[13] = -camera.position[_Y];
-	translateMatrix[14] = -camera.position[_Z];
-
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glMultMatrixf(xRotMatrix);
 	glMultMatrixf(yRotMatrix);
 	glMultMatrixf(zRotMatrix);
+}
+
+/*
+ * r_setupModelview
+ * Calculates the GL modelview matrix. Called each frame.
+ */
+static void r_setupModelviewTranslate()
+{
+	translateMatrix[12] = -camera.position[_X];
+	translateMatrix[13] = -camera.position[_Y];
+	translateMatrix[14] = -camera.position[_Z];
+
+	glMatrixMode(GL_MODELVIEW);
 	glMultMatrixf(translateMatrix);
 }
 
@@ -542,8 +554,89 @@ static void r_drawFrame()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+	r_setupModelviewRotate();
+
+    // Store the current matrix
+//    glPushMatrix();
+
+    // Reset and transform the matrix.
+//    gluLookAt(
+//        0,0,0,
+//        camera.position[_X],camera.position[_Y],camera.position[_Z],
+//        0,1,0);
+
+    // Enable/Disable features
+//    glPushAttrib(GL_ENABLE_BIT);
+//    glEnable(GL_TEXTURE_2D);
+//    glDisable(GL_DEPTH_TEST);
+//    glDisable(GL_LIGHTING);
+//    glDisable(GL_BLEND);
+
+    // Just in case we set all vertices to white.
+    glColor4f(1,1,1,1);
+
+    glBindTexture(GL_TEXTURE_2D, textureStars);
+
+    // Render the front quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the left quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
+    glEnd();
+
+    // Render the back quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
+    glEnd();
+
+    // Render the right quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the top quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 0); glVertex3f( -0.5f,  0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f,  0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+    glEnd();
+
+    // Render the bottom quad
+    glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 1); glVertex3f(  0.5f, -0.5f,  0.5f );
+        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+    glEnd();
+
+    // Restore enable bits and matrix
+//    glPopAttrib();
+//    glPopMatrix();
+
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+
+    // NEW CODE STOPS HERE
 	//Orient and position the camera
-	r_setupModelview();
+//	r_setupModelview();
+    r_setupModelviewTranslate();
 
 	renderer_model_drawASE(0);
 //	glBindTexture(GL_TEXTURE_2D, textureButtons);
