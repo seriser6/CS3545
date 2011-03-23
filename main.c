@@ -22,13 +22,10 @@ Description:	Texturing demo - you will need to change the path to the texture
 #include <string.h>
 #include <sys/stat.h>
 
-#define WINDOW_WIDTH  800
-#define WINDOW_HEIGHT 600
-
 static int user_exit = 0;
 static int textureStars;
 //static int textureButtons;
-//static int textureBrick;
+static int textureBrick;
 
 //INPUT DECLARATIONS
 
@@ -58,7 +55,7 @@ static void camera_translateStrafe(float dist);
 //RENDERER DECLARATIONS
 
 //NEW TEXTURE STUFF
-static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp);
+//static void r_image_loadTGA(char *name, int *glTexID, int *width, int *height, int *bpp);
 
 static void r_init();
 static void r_setupProjection();
@@ -174,13 +171,13 @@ static void input_update()
 	//WASD
 	//The input values are arbitrary
 	if(keys_down[SDLK_w])
-		camera_translateForward(0.1);
+		camera_translateForward(0.5);
 	if(keys_down[SDLK_s])
-		camera_translateForward(-0.1);
+		camera_translateForward(-0.5);
 	if(keys_down[SDLK_a])
-		camera_translateStrafe(0.1);
+		camera_translateStrafe(0.5);
 	if(keys_down[SDLK_d])
-		camera_translateStrafe(-0.1);
+		camera_translateStrafe(-0.5);
 
 	//Reset, sometimes you can get pretty lost...
 	if(keys_down[SDLK_r])
@@ -469,8 +466,8 @@ static void r_init()
 
 //	renderer_img_loadTGA("buttons.tga",
 //			&textureButtons, &myTexWidth, &myTexHeight, &myTexBPP);
-//	renderer_img_loadTGA("brick.tga",
-//			&textureBrick, &myTexWidth, &myTexHeight, &myTexBPP);
+	renderer_img_loadTGA("brick.tga",
+			&textureBrick, &myTexWidth, &myTexHeight, &myTexBPP);
 	renderer_img_loadTGA("Starfield.tga",
 			&textureStars, &myTexWidth, &myTexHeight, &myTexBPP);
 	renderer_model_loadASE("submarine.ASE", efalse);
@@ -491,6 +488,16 @@ static void r_setupProjection()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluPerspective(90.0, 1.33, 0.1, 1024.0);
+}
+
+/*
+ * r_setupModelview
+ * Calculates the GL modelview matrix. Called each frame.
+ */
+static void r_setupModelview()
+{
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 }
 
 /*
@@ -546,16 +553,113 @@ static void r_setupModelviewTranslate()
 	glMultMatrixf(translateMatrix);
 }
 
+//static CGLError hook_CGLFlushDrawable(CGLContextObj ctx)
+//{
+//    DrawOverlay();
+//
+//    return orig_CGLFlushDrawable(ctx);
+//}
+
+void DrawOverlay(void)
+{
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glColor3f(1.0f,1.0f,1.0f);
+    ViewOrtho(800, 600);
+    glBegin(GL_QUADS);
+    glVertex2f(350, 500);
+    glVertex2f(350, 600);
+    glVertex2f(450, 600);
+    glVertex2f(450, 500);
+    glEnd();
+    ViewPerspective();
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+}
+
+void ViewOrtho(int x, int y)
+{
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho( 0, x , y , 0, -1, 1 );
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+}
+
+void ViewPerspective(void)
+{
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );
+    glPopMatrix();
+}
+
 /*
  * r_drawFrame
  * Perform any drawing and setup necessary to produce a single frame.
  */
 static void r_drawFrame()
 {
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	r_setupModelview();
+
+	glBindTexture(GL_TEXTURE_2D, textureBrick);
+	// Render a square in front of us
+	// Render the front quad
+	glBegin(GL_QUADS);
+	glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f, 0.5f );
+	glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f, 0.5f );
+	glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f, 0.5f );
+	glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f, 0.5f );
+	glEnd();
+
+//	// Render the left quad
+//	glBegin(GL_QUADS);
+//	glTexCoord2f(0, 0); glVertex3f(  1.0f, -1.0f,  1.0f );
+//	glTexCoord2f(1, 0); glVertex3f(  1.0f, -1.0f, -1.0f );
+//	glTexCoord2f(1, 1); glVertex3f(  1.0f,  1.0f, -1.0f );
+//	glTexCoord2f(0, 1); glVertex3f(  1.0f,  1.0f,  1.0f );
+//	glEnd();
+//
+//	// Render the back quad
+//	glBegin(GL_QUADS);
+//	glTexCoord2f(0, 0); glVertex3f( -1.0f, -1.0f,  1.0f );
+//	glTexCoord2f(1, 0); glVertex3f(  1.0f, -1.0f,  1.0f );
+//	glTexCoord2f(1, 1); glVertex3f(  1.0f,  1.0f,  1.0f );
+//	glTexCoord2f(0, 1); glVertex3f( -1.0f,  1.0f,  1.0f );
+//	glEnd();
+//
+//	// Render the right quad
+//	glBegin(GL_QUADS);
+//	glTexCoord2f(0, 0); glVertex3f( -1.0f, -1.0f, -1.0f );
+//	glTexCoord2f(1, 0); glVertex3f( -1.0f, -1.0f,  1.0f );
+//	glTexCoord2f(1, 1); glVertex3f( -1.0f,  1.0f,  1.0f );
+//	glTexCoord2f(0, 1); glVertex3f( -1.0f,  1.0f, -1.0f );
+//	glEnd();
+//
+//	// Render the top quad
+//	glBegin(GL_QUADS);
+//	glTexCoord2f(0, 1); glVertex3f( -1.0f,  1.0f, -1.0f );
+//	glTexCoord2f(0, 0); glVertex3f( -1.0f,  1.0f,  1.0f );
+//	glTexCoord2f(1, 0); glVertex3f(  1.0f,  1.0f,  1.0f );
+//	glTexCoord2f(1, 1); glVertex3f(  1.0f,  1.0f, -1.0f );
+//	glEnd();
+//
+//	// Render the bottom quad
+//	glBegin(GL_QUADS);
+//	glTexCoord2f(0, 0); glVertex3f( -1.0f, -1.0f, -1.0f );
+//	glTexCoord2f(0, 1); glVertex3f( -1.0f, -1.0f,  1.0f );
+//	glTexCoord2f(1, 1); glVertex3f(  1.0f, -1.0f,  1.0f );
+//	glTexCoord2f(1, 0); glVertex3f(  1.0f, -1.0f, -1.0f );
+//	glEnd();
 
 	r_setupModelviewRotate();
+
+	glClear(GL_DEPTH_BUFFER_BIT);
 
     // Store the current matrix
 //    glPushMatrix();
@@ -580,50 +684,50 @@ static void r_drawFrame()
 
     // Render the front quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
-        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
-        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
-        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 0); glVertex3f(  1.0f, -1.0f, -1.0f );
+        glTexCoord2f(1, 0); glVertex3f( -1.0f, -1.0f, -1.0f );
+        glTexCoord2f(1, 1); glVertex3f( -1.0f,  1.0f, -1.0f );
+        glTexCoord2f(0, 1); glVertex3f(  1.0f,  1.0f, -1.0f );
     glEnd();
 
     // Render the left quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
-        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
-        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
-        glTexCoord2f(0, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 0); glVertex3f(  1.0f, -1.0f,  1.0f );
+        glTexCoord2f(1, 0); glVertex3f(  1.0f, -1.0f, -1.0f );
+        glTexCoord2f(1, 1); glVertex3f(  1.0f,  1.0f, -1.0f );
+        glTexCoord2f(0, 1); glVertex3f(  1.0f,  1.0f,  1.0f );
     glEnd();
 
     // Render the back quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
-        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f,  0.5f );
-        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f,  0.5f );
-        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
+        glTexCoord2f(0, 0); glVertex3f( -1.0f, -1.0f,  1.0f );
+        glTexCoord2f(1, 0); glVertex3f(  1.0f, -1.0f,  1.0f );
+        glTexCoord2f(1, 1); glVertex3f(  1.0f,  1.0f,  1.0f );
+        glTexCoord2f(0, 1); glVertex3f( -1.0f,  1.0f,  1.0f );
     glEnd();
 
     // Render the right quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
-        glTexCoord2f(1, 0); glVertex3f( -0.5f, -0.5f,  0.5f );
-        glTexCoord2f(1, 1); glVertex3f( -0.5f,  0.5f,  0.5f );
-        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 0); glVertex3f( -1.0f, -1.0f, -1.0f );
+        glTexCoord2f(1, 0); glVertex3f( -1.0f, -1.0f,  1.0f );
+        glTexCoord2f(1, 1); glVertex3f( -1.0f,  1.0f,  1.0f );
+        glTexCoord2f(0, 1); glVertex3f( -1.0f,  1.0f, -1.0f );
     glEnd();
 
     // Render the top quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 1); glVertex3f( -0.5f,  0.5f, -0.5f );
-        glTexCoord2f(0, 0); glVertex3f( -0.5f,  0.5f,  0.5f );
-        glTexCoord2f(1, 0); glVertex3f(  0.5f,  0.5f,  0.5f );
-        glTexCoord2f(1, 1); glVertex3f(  0.5f,  0.5f, -0.5f );
+        glTexCoord2f(0, 1); glVertex3f( -1.0f,  1.0f, -1.0f );
+        glTexCoord2f(0, 0); glVertex3f( -1.0f,  1.0f,  1.0f );
+        glTexCoord2f(1, 0); glVertex3f(  1.0f,  1.0f,  1.0f );
+        glTexCoord2f(1, 1); glVertex3f(  1.0f,  1.0f, -1.0f );
     glEnd();
 
     // Render the bottom quad
     glBegin(GL_QUADS);
-        glTexCoord2f(0, 0); glVertex3f( -0.5f, -0.5f, -0.5f );
-        glTexCoord2f(0, 1); glVertex3f( -0.5f, -0.5f,  0.5f );
-        glTexCoord2f(1, 1); glVertex3f(  0.5f, -0.5f,  0.5f );
-        glTexCoord2f(1, 0); glVertex3f(  0.5f, -0.5f, -0.5f );
+        glTexCoord2f(0, 0); glVertex3f( -1.0f, -1.0f, -1.0f );
+        glTexCoord2f(0, 1); glVertex3f( -1.0f, -1.0f,  1.0f );
+        glTexCoord2f(1, 1); glVertex3f(  1.0f, -1.0f,  1.0f );
+        glTexCoord2f(1, 0); glVertex3f(  1.0f, -1.0f, -1.0f );
     glEnd();
 
     // Restore enable bits and matrix
@@ -714,6 +818,8 @@ static void r_drawFrame()
 //			glVertex3f( 100, -1,  100.0);
 //	glEnd();
 //
+	DrawOverlay();
+
 	SDL_GL_SwapBuffers();
 }
 

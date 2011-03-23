@@ -26,7 +26,7 @@ Created on: Sep 29, 2010
 typedef unsigned char byte;
 typedef enum { efalse, etrue } eboolean;
 
-#define WINDOW_WIDTH  1024
-#define WINDOW_HEIGHT 768
+#define WINDOW_WIDTH  800
+#define WINDOW_HEIGHT 600
 
 #endif /* COMMON_H_ */
