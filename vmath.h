@@ -9,6 +9,7 @@ typedef vec_t vec4_t[4];
 typedef vec_t vec5_t[5];
 
 #define M_PI_DIV180 0.01745329251994329576
+#define SQRT_2 1.41421356237
 
 #define _X 0
 #define _Y 1
