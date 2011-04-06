@@ -21,6 +21,7 @@ Description:	Texturing demo - you will need to change the path to the texture
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 static int user_exit = 0;
 static int textureStars;
@@ -109,8 +110,29 @@ int main(int argc, char* argv[])
 
 	r_init();
 
+	float t = 0.0f;
+	float dt = 0.1f;
+
+	float currentTime = 0.0f;
+	float accumulator = 0.0f;
+
 	while(!user_exit)
 	{
+		float newTime = time(0);
+		float deltaTime = newTime - currentTime;
+		currentTime = newTime;
+
+		if (deltaTime>0.25f)
+			deltaTime = 0.25f;
+
+		accumulator += deltaTime;
+
+		while (accumulator>=dt)
+		{
+			accumulator -= dt;
+			t += dt;
+		}
+
 		//Handle input
 		while(SDL_PollEvent(&event))
 		{
@@ -131,6 +153,7 @@ int main(int argc, char* argv[])
 		}
 
 		input_update();
+
 		r_drawFrame();
 	}
 
@@ -643,43 +666,43 @@ static void r_drawFrame()
 	// Render the front quad
 	glBegin(GL_QUADS);
 	glTexCoord2f(0, 0); glVertex3f(  0.0f, SQRT_2*-0.1f, -0.2f );
-	glTexCoord2f(1, 0); glVertex3f(  0.1f, SQRT_2*-0.1f, -0.1f );
-	glTexCoord2f(1, 1); glVertex3f(  0.1f, SQRT_2* 0.0f, -0.1f );
-	glTexCoord2f(0, 1); glVertex3f(  0.0f, SQRT_2* 0.0f, -0.2f );
+	glTexCoord2f(1, 0); glVertex3f(  0.05f, SQRT_2*-0.1f, -0.1f );
+	glTexCoord2f(1, 1); glVertex3f(  0.05f, SQRT_2*-0.05f, -0.1f );
+	glTexCoord2f(0, 1); glVertex3f(  0.0f, SQRT_2*-0.05f, -0.2f );
 	glEnd();
 	// Render the left quad
 	glBegin(GL_QUADS);
-	glTexCoord2f(0, 0); glVertex3f(  0.1f, SQRT_2*-0.1f, -0.3f );
+	glTexCoord2f(0, 0); glVertex3f(  0.15f, SQRT_2*-0.1f, -0.3f );
 	glTexCoord2f(1, 0); glVertex3f(  0.0f, SQRT_2*-0.1f, -0.2f );
-	glTexCoord2f(1, 1); glVertex3f(  0.0f, SQRT_2* 0.0f, -0.2f );
-	glTexCoord2f(0, 1); glVertex3f(  0.1f, SQRT_2* 0.0f, -0.3f );
+	glTexCoord2f(1, 1); glVertex3f(  0.0f, SQRT_2*-0.05f, -0.2f );
+	glTexCoord2f(0, 1); glVertex3f(  0.15f, SQRT_2*-0.05f, -0.3f );
 	glEnd();
 	// Render the back quad
 	glBegin(GL_QUADS);
 	glTexCoord2f(0, 0); glVertex3f(  0.2f, SQRT_2*-0.1f, -0.2f );
-	glTexCoord2f(1, 0); glVertex3f(  0.1f, SQRT_2*-0.1f, -0.3f );
-	glTexCoord2f(1, 1); glVertex3f(  0.1f, SQRT_2* 0.0f, -0.3f );
-	glTexCoord2f(0, 1); glVertex3f(  0.2f, SQRT_2* 0.0f, -0.2f );
+	glTexCoord2f(1, 0); glVertex3f(  0.15f, SQRT_2*-0.1f, -0.3f );
+	glTexCoord2f(1, 1); glVertex3f(  0.15f, SQRT_2*-0.05f, -0.3f );
+	glTexCoord2f(0, 1); glVertex3f(  0.2f, SQRT_2*-0.05f, -0.2f );
 	glEnd();
 	// Render the right quad
 	glBegin(GL_QUADS);
-	glTexCoord2f(0, 0); glVertex3f(  0.1f, SQRT_2*-0.1f, -0.1f );
+	glTexCoord2f(0, 0); glVertex3f(  0.05f, SQRT_2*-0.1f, -0.1f );
 	glTexCoord2f(1, 0); glVertex3f(  0.2f, SQRT_2*-0.1f, -0.2f );
-	glTexCoord2f(1, 1); glVertex3f(  0.2f, SQRT_2* 0.0f, -0.2f );
-	glTexCoord2f(0, 1); glVertex3f(  0.1f, SQRT_2* 0.0f, -0.1f );
+	glTexCoord2f(1, 1); glVertex3f(  0.2f, SQRT_2*-0.05f, -0.2f );
+	glTexCoord2f(0, 1); glVertex3f(  0.05f, SQRT_2*-0.05f, -0.1f );
 	glEnd();
 	// Render the top quad
 	glBegin(GL_QUADS);
-	glTexCoord2f(0, 0); glVertex3f(  0.1f, SQRT_2* 0.0f, -0.1f );
-	glTexCoord2f(1, 0); glVertex3f(  0.2f, SQRT_2* 0.0f, -0.2f );
-	glTexCoord2f(1, 1); glVertex3f(  0.1f, SQRT_2* 0.0f, -0.3f );
-	glTexCoord2f(0, 1); glVertex3f(  0.0f, SQRT_2* 0.0f, -0.2f );
+	glTexCoord2f(0, 0); glVertex3f(  0.05f, SQRT_2*-0.05f, -0.1f );
+	glTexCoord2f(1, 0); glVertex3f(  0.2f, SQRT_2*-0.05f, -0.2f );
+	glTexCoord2f(1, 1); glVertex3f(  0.15f, SQRT_2*-0.05f, -0.3f );
+	glTexCoord2f(0, 1); glVertex3f(  0.0f, SQRT_2*-0.05f, -0.2f );
 	glEnd();
 	// Render the bottom quad
 	glBegin(GL_QUADS);
-	glTexCoord2f(0, 0); glVertex3f(  0.1f, SQRT_2*-0.1f, -0.1f );
+	glTexCoord2f(0, 0); glVertex3f(  0.05f, SQRT_2*-0.1f, -0.1f );
 	glTexCoord2f(1, 0); glVertex3f(  0.2f, SQRT_2*-0.1f, -0.2f );
-	glTexCoord2f(1, 1); glVertex3f(  0.1f, SQRT_2*-0.1f, -0.3f );
+	glTexCoord2f(1, 1); glVertex3f(  0.15f, SQRT_2*-0.1f, -0.3f );
 	glTexCoord2f(0, 1); glVertex3f(  0.0f, SQRT_2*-0.1f, -0.2f );
 	glEnd();
 
