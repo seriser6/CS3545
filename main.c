@@ -39,8 +39,15 @@ static int user_exit = 0;
 static float gravity = 0;
 static int hit = 0;
 static int textureStars;
-//static int textureButtons;
 static int textureBrick;
+static int textureLava;
+static int textureScore;
+static double randx;
+static double randz;
+static double size;
+static int points = 0;
+static int won;
+static int lost;
 
 //INPUT DECLARATIONS
 
@@ -96,12 +103,17 @@ material_t;
 static material_t materialList[MAX_TEXTURES];
 static int stackPtr = 0;
 
+void newgame() {
+
+}
 /*
  * SDL_main
  * Program entry point.
  */
 int main(int argc, char* argv[])
 {
+	size = 32;
+	srand(time(NULL));
 	SDL_Event	event;
 	SDL_Surface	*screen;
 
@@ -132,6 +144,9 @@ int main(int argc, char* argv[])
 
 	while(!user_exit)
 	{
+		if (won) {
+			r_init();
+		}
 		float newTime = time(0);
 		float deltaTime = newTime - currentTime;
 		currentTime = newTime;
@@ -183,7 +198,7 @@ int main(int argc, char* argv[])
 
 static int keys_down[SDLK_LAST];
 
-static void input_keyDown(SDLKey k) { keys_down[k] = 1; if(k == SDLK_ESCAPE || k == SDLK_q) user_exit = 1; }
+static void input_keyDown(SDLKey k) { keys_down[k] = 1; if(k == SDLK_ESCAPE || k == SDLK_ESCAPE) user_exit = 1; }
 static void input_keyUp  (SDLKey k) { keys_down[k] = 0; }
 
 /*
@@ -242,6 +257,10 @@ static float xRotMatrix[16], yRotMatrix[16], zRotMatrix[16], translateMatrix[16]
 
 static void camera_init()
 {
+	camera.position[_X] = 0;
+	camera.position[_Y] = 0;
+	camera.position[_Z] = 0;
+
 	MatrixIdentity(xRotMatrix);
 	MatrixIdentity(yRotMatrix);
 	MatrixIdentity(zRotMatrix);
@@ -500,6 +519,13 @@ void renderer_img_loadTGA(char *name, int *glTexID, int *width, int *height, int
  */
 static void r_init()
 {
+	lost = 0;
+	won = 0;
+	hit = 0;
+	randx = rand()%21-10;
+	randz = rand()%21-10;
+	size = size/2;
+
 	int myGLTexture, myTexWidth, myTexHeight, myTexBPP;
 
 	glEnable(GL_DEPTH_TEST);
@@ -507,6 +533,8 @@ static void r_init()
 
 	//NEW TEXTURE STUFF
 	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//You might want to play with changing the modes
 	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
@@ -516,8 +544,53 @@ static void r_init()
 			&textureBrick, &myTexWidth, &myTexHeight, &myTexBPP);
 	renderer_img_loadTGA("Starfield.tga",
 			&textureStars, &myTexWidth, &myTexHeight, &myTexBPP);
-	renderer_model_loadASE("submarine.ASE", efalse);
+	renderer_img_loadTGA("lava01.tga",
+			&textureLava, &myTexWidth, &myTexHeight, &myTexBPP);
+//	renderer_model_loadASE("submarine.ASE", efalse);
+	renderer_model_loadASE("volcano.ASE", efalse);
 
+	switch(points) {
+	case 0:
+		renderer_img_loadTGA("score0.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 1:
+		renderer_img_loadTGA("score1.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 2:
+		renderer_img_loadTGA("score2.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 3:
+		renderer_img_loadTGA("score3.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 4:
+		renderer_img_loadTGA("score4.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 5:
+		renderer_img_loadTGA("score5.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 6:
+		renderer_img_loadTGA("score6.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 7:
+		renderer_img_loadTGA("score7.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 8:
+		renderer_img_loadTGA("score8.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	case 9:
+		renderer_img_loadTGA("score9.tga",
+				&textureScore, &myTexWidth, &myTexHeight, &myTexBPP);
+		break;
+	}
 
 
 	camera_init();
@@ -593,24 +666,30 @@ static void r_setupModelviewRotate()
  */
 static void r_setupModelviewTranslate()
 {
-	if (camera.position[_X]>2 || camera.position[_X]<-2 || camera.position[_Z]>2 || camera.position[_Z]<-2) {
+	if (gravity==0 && (camera.position[_X]>2 || camera.position[_X]<-2 || camera.position[_Z]>2 || camera.position[_Z]<-2)) {
 		if (!hit) {
 			gravity = -0.05;
 		}
 	}
-	else if (camera.position[_Y]<-99) {
+	if (camera.position[_Y]<-99 && !(camera.position[_X]>randx+size || camera.position[_X]<randx-size || camera.position[_Z]>randz+size || camera.position[_Z]<randz-size)) {
 		if (!hit) {
 			gravity = 0;
+			points++;
+			won = 1;
 		}
 	}
 	if (camera.position[_Y]<-99) {
 		hit = 1;
 	}
-	camera.position[_Y] += gravity;
-	translateMatrix[12] = -camera.position[_X];
-	translateMatrix[13] = -camera.position[_Y];
-	translateMatrix[14] = -camera.position[_Z];
-
+	if (camera.position[_Y]<-199 && gravity) {
+		lost = 1;
+	}
+	if (!lost) {
+		camera.position[_Y] += gravity;
+		translateMatrix[12] = -camera.position[_X];
+		translateMatrix[13] = -camera.position[_Y];
+		translateMatrix[14] = -camera.position[_Z];
+	}
 	glMatrixMode(GL_MODELVIEW);
 //	glMultMatrixf(flipMatrix);
 	glMultMatrixf(translateMatrix);
@@ -686,7 +765,25 @@ static void r_drawFrame()
 
     r_setupModelviewTranslate();
 
-//	renderer_model_drawASE(0);
+
+	renderer_model_drawASE(0);
+
+	glBindTexture(GL_TEXTURE_2D, textureLava);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0,0); glVertex3f(200,-201,200);
+    glTexCoord2f(1,0); glVertex3f(200,-201,-200);
+    glTexCoord2f(1,1); glVertex3f(-200,-201,-200);
+    glTexCoord2f(0,1); glVertex3f(-200,-201,200);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, textureScore);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0,0); glVertex3f(20,-200,20);
+    glTexCoord2f(1,0); glVertex3f(20,-200,120);
+    glTexCoord2f(1,1); glVertex3f(120,-200,120);
+    glTexCoord2f(0,1); glVertex3f(120,-200,20);
+    glEnd();
+
     glBindTexture(GL_TEXTURE_2D, textureBrick);
 
     glBegin(GL_QUADS);
@@ -697,10 +794,10 @@ static void r_drawFrame()
     glEnd();
 
     glBegin(GL_QUADS);
-    glTexCoord2f(0,0); glVertex3f(2,-100,2);
-    glTexCoord2f(1,0); glVertex3f(2,-100,-2);
-    glTexCoord2f(1,1); glVertex3f(-2,-100,-2);
-    glTexCoord2f(0,1); glVertex3f(-2,-100,2);
+    glTexCoord2f(0,0); glVertex3f(randx+size,-100,randz+size);
+    glTexCoord2f(size/4,0); glVertex3f(randx+size,-100,randz-size);
+    glTexCoord2f(size/4,size/4); glVertex3f(randx-size,-100,randz-size);
+    glTexCoord2f(0,size/4); glVertex3f(randx-size,-100,randz+size);
     glEnd();
 
 //	DrawOverlay();
